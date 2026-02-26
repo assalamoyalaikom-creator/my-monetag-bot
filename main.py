@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 
 app = Flask('')
 @app.route('/')
-def home(): return "Reporting & Security Bot is Active!"
+def home(): return "Final Stealth Bot is Active!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -20,10 +20,12 @@ TOKEN = '8770622353:AAHzdBbNBFlmTbKcMcOgKlwZe8Ei4qHcrKM'
 bot = telebot.TeleBot(TOKEN)
 DIRECT_LINK = "https://omg10.com/4/10646993" 
 
+# রেফারার লিস্ট (কোথা থেকে ভিজিটর আসছে দেখাবে)
+REFERRERS = ["https://www.google.com/", "https://www.youtube.com/", "https://www.bing.com/", "https://twitter.com/"]
+
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
 ]
 
 is_running = False
@@ -33,14 +35,13 @@ def worker(chat_id):
     count = 0
     while is_running:
         try:
-            # ধাপ ১: প্রক্সি ও ডিভাইস সেটআপ
-            bot.send_message(chat_id, "🔍 ধাপ ১: নতুন একটি হাই-কোয়ালিটি আইপি (Proxy) খোঁজা হচ্ছে...")
+            bot.send_message(chat_id, "🔍 ধাপ ১: প্রক্সি এবং ট্রাফিক সোর্স সেটআপ হচ্ছে...")
             url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=US,GB,CA,DE,FR&ssl=yes&anonymity=elite"
             proxies = requests.get(url).text.strip().split('\n')
             proxy = random.choice(proxies).strip()
             
+            ref = random.choice(REFERRERS)
             agent = random.choice(USER_AGENTS)
-            bot.send_message(chat_id, f"🌐 ধাপ ২: আইপি পাওয়া গেছে ({proxy})। এখন ব্রাউজারকে {agent[:20]}... ডিভাইসে রূপান্তর করছি।")
 
             options = Options()
             options.add_argument('--headless=new')
@@ -51,33 +52,29 @@ def worker(chat_id):
             options.add_argument('--disable-blink-features=AutomationControlled')
 
             driver = webdriver.Chrome(options=options)
-            driver.set_page_load_timeout(45)
+            
+            # রেফারার মাস্কিং (গুগল থেকে আসছে এমন দেখানো)
+            driver.execute_cdp_cmd("Network.setExtraHTTPHeaders", {
+                "headers": {"Referer": ref}
+            })
 
-            # ধাপ ৩: মনিটেগ লিঙ্ক লোড
-            bot.send_message(chat_id, "⏳ ধাপ ৩: মনিটেগ লিঙ্ক লোড করা হচ্ছে। দয়া করে অপেক্ষা করুন...")
+            bot.send_message(chat_id, f"🌐 ধাপ ২: {ref} থেকে লিঙ্কে ঢোকা হচ্ছে। আইপি: {proxy}")
             driver.get(DIRECT_LINK)
             
-            # ধাপ ৪: সেশন ভ্যালিডেশন (মানুষের মতো আচরণ)
-            bot.send_message(chat_id, "👀 ধাপ ৪: লিঙ্ক সফলভাবে ওপেন হয়েছে। সেশনটি আসল মানুষের মতো করতে স্ক্রল করা হচ্ছে এবং ৪০ সেকেন্ড অপেক্ষা করছি...")
-            time.sleep(10)
-            driver.execute_script("window.scrollTo(0, 400);")
+            bot.send_message(chat_id, "⏳ ধাপ ৩: পেজ স্ক্রল এবং অ্যাক্টিভিটি সিমুলেট করা হচ্ছে...")
+            time.sleep(15)
+            driver.execute_script("window.scrollTo(0, 600);")
             time.sleep(20)
-            driver.execute_script("window.scrollTo(400, 0);")
-            time.sleep(10)
             
             driver.quit()
-            
-            # ধাপ ৫: ফলাফল
             count += 1
-            bot.send_message(chat_id, f"✅ ধাপ ৫: কাজ সম্পন্ন! \n🔢 সেশন নম্বর: {count} \n⚠️ দ্রষ্টব্য: মনিটেগ ড্যাশবোর্ডে আপডেট হতে কিছুটা সময় নিতে পারে।")
+            bot.send_message(chat_id, f"✅ ধাপ ৪: সেশন সফল! মোট ট্রাই: {count}")
             
-            # পরবর্তী কাজের আগে বিরতি
-            bot.send_message(chat_id, "💤 এখন আমি ৩ মিনিট বিশ্রাম নেব, যাতে মনিটেগ সন্দেহ না করে। এরপর আবার আপনাকে জানিয়ে নতুন কাজ শুরু করব।")
-            time.sleep(180)
+            # বড় গ্যাপ দেওয়া হচ্ছে যাতে সন্দেহ না হয়
+            time.sleep(random.randint(150, 250))
             
         except Exception as e:
-            bot.send_message(chat_id, "❌ এই আইপিটি কাজ করছে না। আমি আবার নতুন আইপি দিয়ে চেষ্টা করছি...")
-            time.sleep(10)
+            time.sleep(15)
             continue
 
 @bot.message_handler(commands=['work'])
@@ -85,14 +82,14 @@ def start_bot(message):
     global is_running
     if not is_running:
         is_running = True
-        bot.reply_to(message, "🚀 রিপোর্ট মোড চালু হয়েছে! এখন থেকে আমার প্রতিটি পদক্ষেপ আপনাকে মেসেজ দিয়ে জানাবো।")
+        bot.reply_to(message, "🚀 স্টিলথ মোড চালু! এখন মনিটেগ ভাববে ভিজিটর গুগল/ইউটিউব থেকে আসছে।")
         Thread(target=worker, args=(message.chat.id,)).start()
 
 @bot.message_handler(commands=['stop'])
 def stop_bot(message):
     global is_running
     is_running = False
-    bot.reply_to(message, "🛑 কাজ বন্ধ করা হয়েছে। আপনার অনুমতি ছাড়া আমি আর কিছুই করবো না।")
+    bot.reply_to(message, "🛑 কাজ বন্ধ।")
 
 if __name__ == "__main__":
     t = Thread(target=run_flask)
