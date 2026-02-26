@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 
 app = Flask('')
 @app.route('/')
-def home(): return "Proxy Auth Patch is Running!"
+def home(): return "OwlProxy Tracking Bot is Active!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -20,7 +20,7 @@ TOKEN = '8770622353:AAHzdBbNBFlmTbKcMcOgKlwZe8Ei4qHcrKM'
 bot = telebot.TeleBot(TOKEN)
 DIRECT_LINK = "https://omg10.com/4/10646993" 
 
-# তোমার দেওয়া সবগুলো আইপি এখানে লিস্ট করা হয়েছে
+# তোমার দেওয়া সব প্রক্সি এখানে সঠিক ফরম্যাটে সাজানো
 PROXY_LIST = [
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_BR_st__city_sid_66490565_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_BR_st__city_sid_36437645_time_5:2325276",
@@ -90,7 +90,10 @@ def worker(chat_id):
             proxy_raw = random.choice(PROXY_LIST)
             host, port, user, password = proxy_raw.split(':')
             
-            bot.send_message(chat_id, f"🛡️ অথেন্টিকেশন প্যাচ ব্যবহার করা হচ্ছে...\n🌍 আইপি কান্ট্রি: {user.split('_zone_')[1][:2]}")
+            # কান্ট্রি কোড বের করা
+            country = user.split('_zone_')[1][:2] if '_zone_' in user else "UN"
+            
+            bot.send_message(chat_id, f"🛡️ ধাপ ১: {country} আইপি অথেন্টিকেট করা হচ্ছে...")
 
             plugin_file = create_proxy_auth_extension(host, port, user, password)
             
@@ -100,27 +103,46 @@ def worker(chat_id):
             options.add_extension(plugin_file)
 
             driver = webdriver.Chrome(options=options)
+            
+            bot.send_message(chat_id, f"📡 ধাপ ২: মনিটেগ লিঙ্কে ঢোকার চেষ্টা করছি...")
             driver.get(DIRECT_LINK)
             
-            time.sleep(30) # লোড হওয়ার সময়
+            # ৩০ সেকেন্ড অপেক্ষা লোড হওয়ার জন্য
+            time.sleep(30) 
             
-            screenshot = "auth_proof.png"
+            # বর্তমান ইউআরএল চেক করা
+            current_url = driver.current_url
+            bot.send_message(chat_id, f"🔗 বর্তমান পেজ ইউআরএল:\n{current_url}")
+            
+            # স্ক্রিনশট নেওয়া
+            screenshot = "tracking_proof.png"
             driver.save_screenshot(screenshot)
+            
             with open(screenshot, "rb") as f:
-                bot.send_photo(chat_id, f, caption=f"📸 সেশন: {count+1}\n✅ যদি এবারও এরর আসে, তবে বুঝতে হবে ক্লাউড সার্ভার থেকে এই আইপিগুলো ব্লকড।")
+                bot.send_photo(chat_id, f, caption=f"📸 সেশন: {count+1}\n🌍 কান্ট্রি: {country}\n\nউপরে দেখুন বট কোন লিঙ্কে আছে।")
 
             driver.quit()
             count += 1
-            time.sleep(150)
+            bot.send_message(chat_id, f"✅ কাজ শেষ! সেশন {count} সফল।")
+            
+            time.sleep(180) # ৩ মিনিট বিরতি
+            
         except Exception as e:
+            bot.send_message(chat_id, "⚠️ এরর হয়েছে! অন্য আইপি দিয়ে চেষ্টা করছি...")
             time.sleep(10)
 
 @bot.message_handler(commands=['work'])
 def start_bot(message):
     global is_running
     is_running = True
-    bot.reply_to(message, "🚀 প্রক্সি অথেন্টিকেশন প্যাচ ও সম্পূর্ণ লিস্ট নিয়ে কাজ শুরু!")
+    bot.reply_to(message, "🚀 প্রক্সি অথেন্টিকেশন ও ইউআরএল ট্র্যাকিং মোড চালু!")
     Thread(target=worker, args=(message.chat.id,)).start()
+
+@bot.message_handler(commands=['stop'])
+def stop_bot(message):
+    global is_running
+    is_running = False
+    bot.reply_to(message, "🛑 কাজ বন্ধ করা হয়েছে।")
 
 if __name__ == "__main__":
     t = Thread(target=run_flask)
