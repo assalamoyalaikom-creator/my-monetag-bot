@@ -16,8 +16,8 @@ BLOG_LINK = 'https://12rahim.blogspot.com/'
 bot = telebot.TeleBot(API_TOKEN)
 is_running = False
 
-# --- ২. প্রক্সি লিস্ট (ডুপ্লিকেট মুক্ত) ---
-RAW_PROXIES = list(set([
+# --- ২. প্রক্সি লিস্ট ---
+RAW_PROXIES = [
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_TZ_st__city_sid_01033247_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_TZ_st__city_sid_85821338_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_TZ_st__city_sid_93152772_time_5:2325276",
@@ -228,7 +228,10 @@ RAW_PROXIES = list(set([
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_IT_st__city_sid_05774157_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_IT_st__city_sid_45224674_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_IT_st__city_sid_12535584_time_5:2325276"
-])))
+]
+
+# ডুপ্লিকেট বাদ দেওয়া
+PROXIES = list(set(RAW_PROXIES))
 
 # --- ৩. প্রক্সি চেক লজিক ---
 def is_proxy_working(proxy_host, proxy_port, proxy_user, proxy_pass):
@@ -269,7 +272,7 @@ def run_automation(chat_id):
         driver = None
         plugin_path = None
         try:
-            proxy_raw = random.choice(RAW_PROXIES)
+            proxy_raw = random.choice(PROXIES)
             parts = proxy_raw.split(':')
             host, port, user, password = parts[0], parts[1], parts[2], parts[3]
 
@@ -280,39 +283,21 @@ def run_automation(chat_id):
             options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--window-size=1280,720')
-            options.add_argument('--disable-blink-features=AutomationControlled')
-
-            plugin_path = create_proxy_auth_extension(host, port, user, password)
-            options.add_extension(plugin_path)
+            options.add_extension(create_proxy_auth_extension(host, port, user, password))
 
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
             
             driver.get(BLOG_LINK)
-            bot.send_message(chat_id, f"✅ সেশন {count}: প্রক্সি {host} ব্যবহার করে কাজ চলছে।")
-            
-            time.sleep(15)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-            time.sleep(5)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(10)
-
-            ss_path = f"report_{count}.png"
-            driver.save_screenshot(ss_path)
-            with open(ss_path, "rb") as photo:
-                bot.send_photo(chat_id, photo, caption=f"📊 সেশন {count} রিপোর্ট সফল।\nপ্রক্সি: {host}")
-            
-            os.remove(ss_path)
+            bot.send_message(chat_id, f"✅ সেশন {count}: প্রক্সি {host} সাকসেসফুল।")
+            time.sleep(20)
 
         except Exception as e:
             print(f"Error: {e}")
         finally:
             if driver: driver.quit()
-            if plugin_path and os.path.exists(plugin_path): os.remove(plugin_path)
             count += 1
-            time.sleep(random.randint(60, 100))
+            time.sleep(60)
 
 # --- ৬. টেলিগ্রাম কমান্ড ---
 @bot.message_handler(commands=['work'])
@@ -320,13 +305,13 @@ def start(message):
     global is_running
     if not is_running:
         is_running = True
-        bot.reply_to(message, "🚀 বট কাজ শুরু করেছে!")
+        bot.reply_to(message, "🚀 কাজ শুরু হয়েছে!")
         run_automation(message.chat.id)
 
 @bot.message_handler(commands=['stop'])
 def stop(message):
     global is_running
     is_running = False
-    bot.reply_to(message, "🛑 বট বন্ধ করা হয়েছে।")
+    bot.reply_to(message, "🛑 বট বন্ধ হয়েছে।")
 
 bot.polling(none_stop=True)
