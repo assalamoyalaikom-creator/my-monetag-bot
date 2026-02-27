@@ -16,7 +16,7 @@ BLOG_LINK = 'https://12rahim.blogspot.com/'
 bot = telebot.TeleBot(API_TOKEN)
 is_running = False
 
-# --- ২. প্রক্সি লিস্ট (ডুপ্লিকেট মুক্ত এবং রিফাইন্ড) ---
+# --- ২. প্রক্সি লিস্ট (ডুপ্লিকেট মুক্ত) ---
 RAW_PROXIES = list(set([
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_TZ_st__city_sid_01033247_time_5:2325276",
     "change4.owlproxy.com:7778:G67RxG84ts40_custom_zone_TZ_st__city_sid_85821338_time_5:2325276",
@@ -291,16 +291,14 @@ def run_automation(chat_id):
             driver = webdriver.Chrome(service=service, options=options)
             
             driver.get(BLOG_LINK)
-            bot.send_message(chat_id, f"✅ সেশন {count}: প্রক্সি {host} (দেশের আইপি) ব্যবহার করে ব্লগে ঢোকা হয়েছে।")
+            bot.send_message(chat_id, f"✅ সেশন {count}: প্রক্সি {host} ব্যবহার করে কাজ চলছে।")
             
-            # হিউম্যান বিহেভিয়ার: একটু বিরতি দিয়ে স্ক্রল করা
             time.sleep(15)
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
             time.sleep(5)
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(10)
 
-            # স্ক্রিনশট রিপোর্ট
             ss_path = f"report_{count}.png"
             driver.save_screenshot(ss_path)
             with open(ss_path, "rb") as photo:
@@ -314,7 +312,6 @@ def run_automation(chat_id):
             if driver: driver.quit()
             if plugin_path and os.path.exists(plugin_path): os.remove(plugin_path)
             count += 1
-            # রেন্ডারের মেমোরি ক্লিয়ার করার জন্য ১-২ মিনিট বিরতি
             time.sleep(random.randint(60, 100))
 
 # --- ৬. টেলিগ্রাম কমান্ড ---
@@ -323,7 +320,7 @@ def start(message):
     global is_running
     if not is_running:
         is_running = True
-        bot.reply_to(message, "🚀 মনিট্যাগ বট কাজ শুরু করেছে! ২০০ প্রক্সি সক্রিয়।")
+        bot.reply_to(message, "🚀 বট কাজ শুরু করেছে!")
         run_automation(message.chat.id)
 
 @bot.message_handler(commands=['stop'])
